@@ -24,7 +24,10 @@ void help_command(int, char **);
 void host_command(int, char **);
 void mmtest_command(int, char **);
 void test_command(int, char **);
+void new_command(int, char **);
 void _command(int, char **);
+
+void empty_function();
 
 #define MKCL(n, d) {.name=#n, .fptr=n ## _command, .desc=d}
 
@@ -37,6 +40,7 @@ cmdlist cl[]={
 	MKCL(mmtest, "heap memory allocation test"),
 	MKCL(help, "help"),
 	MKCL(test, "test new function"),
+        MKCL(new, "create new task"),
 	MKCL(, ""),
 };
 
@@ -198,6 +202,38 @@ void test_command(int n, char *argv[]) {
     }
 
     host_action(SYS_CLOSE, handle);
+}
+
+void new_command(int n, char *argv[]){
+    int number =0;
+    int result;
+    fio_printf(1,"\r\n");
+    
+    if (n>1) {
+        for (int i = 0; argv[1][i] != '\0'; i++) {
+            number *= 10;
+            number += argv[1][i] - '0';
+        }
+        for (int i = 0; i < number; i++) {
+            result = xTaskCreate(empty_function,
+                                 (signed portCHAR *)"empty",
+                                 256,
+                                 NULL,
+                                 tskIDLE_PRIORITY + 1,
+                                 NULL);
+            if (result == 1) {
+                fio_printf(1, "New task creation is successful.\r\n");
+            } else {
+                fio_printf(1, "New task creation is failed.\r\n");
+            }
+        }
+    } else {
+        fio_printf(1, "Please enter how many task wanted to be created.\r\n");
+    }
+}
+
+void empty_function () {
+    while (1){}
 }
 
 void _command(int n, char *argv[]){
