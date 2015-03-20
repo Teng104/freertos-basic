@@ -64,9 +64,9 @@ int parse_command(char *str, char *argv[]){
 void ls_command(int n, char *argv[]){
     fio_printf(1,"\r\n"); 
     int dir;
-    if(n == 0){
+    if(n == 1){
         dir = fs_opendir("");
-    }else if(n == 1){
+    }else if(n == 2){
         dir = fs_opendir(argv[1]);
         //if(dir == )
     }else{
@@ -161,6 +161,20 @@ void help_command(int n,char *argv[]){
 }
 
 void test_command(int n, char *argv[]) {
+    int previous = -1;
+    int result = 1;
+    int sum = 0;
+    int x = 0;
+    for (int i = 0; argv[1][i] != '\0'; i++) {
+        x *= 10;
+        x += argv[1][i] - '0';
+    }
+    for (int i = 0; i <= x; i++) {
+        sum = result + previous;
+        previous = result;
+        result = sum;
+    }
+    fio_printf(1,"\r\n%d",result);
     int handle;
     int error;
 
