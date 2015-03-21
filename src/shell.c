@@ -25,9 +25,11 @@ void host_command(int, char **);
 void mmtest_command(int, char **);
 void test_command(int, char **);
 void new_command(int, char **);
+void log_command(int,char **);
 void _command(int, char **);
 
 void empty_function();
+void logger();
 
 #define MKCL(n, d) {.name=#n, .fptr=n ## _command, .desc=d}
 
@@ -41,6 +43,7 @@ cmdlist cl[]={
 	MKCL(help, "help"),
 	MKCL(test, "test new function"),
         MKCL(new, "create new task"),
+        MKCL(log, "Start system logger"),
 	MKCL(, ""),
 };
 
@@ -217,7 +220,7 @@ void new_command(int n, char *argv[]){
         for (int i = 0; i < number; i++) {
             result = xTaskCreate(empty_function,
                                  (signed portCHAR *)"empty",
-                                 256,
+                                 128,
                                  NULL,
                                  tskIDLE_PRIORITY + 1,
                                  NULL);
@@ -234,6 +237,63 @@ void new_command(int n, char *argv[]){
 
 void empty_function () {
     while (1){}
+}
+
+void log_command(int n, char *argv[]){
+    int result;
+    fio_printf(1, "\r\n");
+    result = xTaskCreate(logger,
+                         (signed portCHAR *) "Logger1",
+                          1024,
+                          NULL, 
+                          tskIDLE_PRIORITY + 1,
+                          NULL);
+    if (result == 1) {
+        fio_printf(1, "Log task creation is successful.\r\n");
+    } else {
+        fio_printf(1, "Log task creation is failed.\r\n");
+    }
+}
+
+void logger(void *pvParameters)
+{
+    //signed char buf[1024];
+    char output[1024] = {0};
+    char *tag = "\nName          State   Priority  Stack  Num\n*******************************************\n";
+    int handle, error;
+    const portTickType xDelay = 100000 / 100;
+
+    handle = host_action(SYS_OPEN, "output/syslog", 4);
+    if(handle == -1) {
+        fio_printf(1, "Open file error!\n");
+        return;
+    }
+
+    while(1) {
+        memcpy(output, tag, strlen(tag));
+        error = host_action(SYS_WRITE, handle, (void *)output, strlen(output));
+        if(error != 0) {
+            fio_printf(1, "Write file error1! Remain %d bytes didn't write in the file.\n\r", error);
+            host_action(SYS_CLOSE, handle);
+            return;
+        }
+        signed char buf[1024];
+        vTaskList(buf);
+        
+        memcpy(output, (char *)(buf + 2), strlen((char *)buf) - 2);
+
+        //error = host_action(SYS_WRITE, handle, (void *)buf, strlen((char *)buf));
+        error = host_action(SYS_WRITE, handle, (void *)output, strlen(output));
+        if(error != 0) {
+            fio_printf(1, "Write file error2! Remain %d bytes didn't write in the file.\n\r", error);
+            host_action(SYS_CLOSE, handle);
+            return;
+        }
+
+        vTaskDelay(xDelay);
+    }
+    
+    host_action(SYS_CLOSE, handle);
 }
 
 void _command(int n, char *argv[]){
